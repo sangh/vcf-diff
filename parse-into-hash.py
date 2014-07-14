@@ -48,41 +48,35 @@ def _parse_one_vc(vc):
         if len(elem) != 2:
             raise Exception('Bad parse: ' + str(elem) + ' from: ' + str(vc))
         key_parts = elem[0].split(';')
-        for k in ret.keys():
-            if key_parts[0] == k[0] and key_parts[1] == k[1]:
-                raise Exception('Mult keys: ' + str(elem) + ' from: ' + str(vc))
-        key = [key_parts[0], None, None, None]
+        key = [key_parts[0], None, None]
         for k in key_parts[1:]:
             if '=' in k:
-                CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE
                 if 'CHARSET=UTF-8' == k:
-                    if key[2]:
+                    if key[1]:
                         raise Exception('Mult charsets: ' + str(vc))
                     else:
-                        key[2] = 'UTF-8'
+                        key[1] = 'UTF-8'
                 elif 'ENCODING=QUOTED-PRINTABLE' == k:
-                    if key[3]:
+                    if key[2]:
                         raise Exception('Mult encodings: ' + str(vc))
                     else:
-                        key[3] = 'QUOTED-PRINTABLE'
+                        key[2] = 'QUOTED-PRINTABLE'
                 elif 'ENCODING=BASE64' == k:
-                    if key[3]:
+                    if key[2]:
                         raise Exception('Mult encodings: ' + str(vc))
                     else:
-                        key[3] = 'BASE64'
+                        key[2] = 'BASE64'
                 else:
                     raise Exception('Unknown modifier: ' + str(vc))
             else:
-                if key[1]:
-                    raise Exception('Mult sub-categories: ' + str(vc))
-                else:
-                    key[1] = k
+                key[0] = key[0] + ';' + k
         if not key[1]:
-            key[1] = ''
+            key[1] = 'ASCII'
         if not key[2]:
-            key[2] = 'ASCII'
-        if not key[3]:
-            key[3] = 'TEXT'
+            key[2] = 'TEXT'
+        for k in ret.keys():
+            if key[0] == k[0]:
+                raise Exception('Mult keys: ' + str(key) + ' from: ' + str(vc))
 
         ret[tuple(key)] = elem[1]
     return ret
@@ -108,9 +102,6 @@ def main(stdin):
     for vc in inp:
         # This can throw things.
         vc_h = _parse_one_vc(vc)
-        # Check for:
-        #if not key_parts[0] in ('ADR', 'EMAIL', 'FN', 'N', 'NOTE', 'PHOTO', 'TEL', 'URL', ):
-            #raise Exception('Unknown key: ' + str(key_parts[0]) + ' from: ' + str(vc))
         fnkey = None
         nfns = 0
         for k,v in vc_h.items():
@@ -125,13 +116,17 @@ def main(stdin):
             raise Exception('Mult FN keys ' + str(fnkey) + ': ' + str(vc))
         ret[fnkey] = vc_h
 
+    for k,v in ret.items():
+        for i in v:
+            if i[0] in ('FN', 'N', 'NOTE', 'PHOTO;JPEG', 'URL', ):
+                continue
+            if i[0][0:5] == 'EMAIL':
+                continue
+            if i[0][0:4] in ('ADR;', 'TEL;', ):
+                continue
+            raise Exception('Unknown key base: ' + str(i) + ' in: ' + str(v))
     return ret
 
 if __name__ == "__main__":
-    try:
-        ret = main(sys.stdin)
-    except Exception as e:
-        print >> sys.stderr, str(e)
-        sys.exit(1)
-    print >> sys.stdout, str(ret)
+    ret = main(sys.stdin)
     sys.exit(0)
