@@ -17,6 +17,76 @@ Write out a hash, normalised format, that can itself be evaled.
 """
 
 import sys
+
+def _parse_one_vc(vc):
+    """Takes in a list that represents a single card, returns a hash, or
+    throws an exception."""
+    if len(vc) < 4:
+        raise Exception('Invalid or empty: ' + str(vc))
+    else:
+        if 'BEGIN:VCARD' != vc[0] or 'END:VCARD' != vc[-1]:
+            raise Exception('Bad begin or end: ' + str(vc))
+        if 'VERSION:' != vc[1][0:8]:
+            raise Exception('Version error: ' + str(vc))
+        if not vc[1][8:] in ('2.1', ):
+            raise Exception('Unsupported version: ' + str(vc))
+    # We go through, if there is a ':' we take it as a [k,v], and if not then
+    # it is joined to the line above.
+    elements = []
+    for elem in vc[2:-1]:
+        splits = elem.split(':')
+        if len(splits) < 2:
+            if len(elements) < 1:
+                raise Exception('Invalid first line: ' + str(vc))
+            elements[-1][1] = elements[-1][1] + elem
+        else:
+            elements.append([splits[0], ':'.join(splits[1:])])
+    if len(elements) < 1:
+        raise Exception('Invalid vc: ' + str(vc))
+    ret = {}
+    for elem in elements:
+        if len(elem) != 2:
+            raise Exception('Bad parse: ' + str(elem) + ' from: ' + str(vc))
+        key_parts = elem[0].split(';')
+        for k in ret.keys():
+            if key_parts[0] == k[0] and key_parts[1] == k[1]:
+                raise Exception('Mult keys: ' + str(elem) + ' from: ' + str(vc))
+        key = [key_parts[0], None, None, None]
+        for k in key_parts[1:]:
+            if '=' in k:
+                CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE
+                if 'CHARSET=UTF-8' == k:
+                    if key[2]:
+                        raise Exception('Mult charsets: ' + str(vc))
+                    else:
+                        key[2] = 'UTF-8'
+                elif 'ENCODING=QUOTED-PRINTABLE' == k:
+                    if key[3]:
+                        raise Exception('Mult encodings: ' + str(vc))
+                    else:
+                        key[3] = 'QUOTED-PRINTABLE'
+                elif 'ENCODING=BASE64' == k:
+                    if key[3]:
+                        raise Exception('Mult encodings: ' + str(vc))
+                    else:
+                        key[3] = 'BASE64'
+                else:
+                    raise Exception('Unknown modifier: ' + str(vc))
+            else:
+                if key[1]:
+                    raise Exception('Mult sub-categories: ' + str(vc))
+                else:
+                    key[1] = k
+        if not key[1]:
+            key[1] = ''
+        if not key[2]:
+            key[2] = 'ASCII'
+        if not key[3]:
+            key[3] = 'TEXT'
+
+        ret[tuple(key)] = elem[1]
+    return ret
+
 def main(stdin):
     """Read, and eval stdin, evil, I know, shut up."""
     inp = stdin.readlines()
@@ -33,55 +103,28 @@ def main(stdin):
                 raise Exception('Not a list of lists of strings: ' + str(s))
             if s != s.encode('ascii', 'ignore').strip():
                 raise Exception('Not a list of lists of ASCII strings: ' + s)
-    # Now we can check the values themselves.
-    for vc in inp:
-        if 3 >= len(vc):
-            raise Exception('Invalid or empty: ' + str(vc))
-        else:
-            if 'BEGIN:VCARD' != vc[0] or 'END:VCARD' != vc[-1]:
-                raise Exception('Bad begin or end: ' + str(vc))
-            if 'VERSION:' != vc[1][0:8]:
-                raise Exception('Version error: ' + str(vc))
-            if vc[1][8:] not in ('2.1', ):
-                raise Exception('Unsupported version: ' + str(vc))
-        # Check validity of options.
-        h = {}
-        state = "normal"
-        for elem in vc[2:-1]:
-            if inphoto:
-                if '' == elem:
-                    h[photo_k] = photo_v
-                    inphoto = False
-                    photo_k = []  # An invalid hash key
-                    photo_v = ''
-                    continue
-                elif ':' in elem:
-                    h[photo_k] = photo_v
-                    inphoto = False
-                    photo_k = []  # An invalid hash key
-                    photo_v = ''
-                    # No continue!
-                else:
-                    photo_v = photo_v + elem[1:]
-                    continue
-            # There would be an else, but one section needs to break above.
-            splits = elem.split(':')
-            if len(splits) < 2:
-                raise Exception('Bad elem : ' + str(elem))
-            k = splits[0]
-            v = ':'.join(splits[1:])
-            if k in ('PHOTO;ENCODING=BASE64;JPEG', 'NOTE;ENCODING=QUOTED-PRINTABLE'):
-                " need to fix this, photos, end with a blank line(encoding=Base 64,
-                while notes (or anything with an encoding quoted-printable) don't have
-                an end, so we can check for a ':' to break to next option.
-                "
-                inphoto = True
-                photo_k = k
-                photo_v = v
-            else:
-                print(k)
-
+    # Build the hashes, keyed off of 'FN'.
     ret = {}
+    for vc in inp:
+        # This can throw things.
+        vc_h = _parse_one_vc(vc)
+        # Check for:
+        #if not key_parts[0] in ('ADR', 'EMAIL', 'FN', 'N', 'NOTE', 'PHOTO', 'TEL', 'URL', ):
+            #raise Exception('Unknown key: ' + str(key_parts[0]) + ' from: ' + str(vc))
+        fnkey = None
+        nfns = 0
+        for k,v in vc_h.items():
+            if 'FN' == k[0]:
+                nfns = nfns + 1
+                fnkey = v
+        if 0 == nfns:
+            raise Exception('No FN: ' + str(vc) + ' parsed: ' + str(vc_h))
+        if nfns > 1:
+            raise Exception('Mult FN: ' + str(vc) + ' parsed: ' + str(vc_h))
+        if fnkey in ret:
+            raise Exception('Mult FN keys ' + str(fnkey) + ': ' + str(vc))
+        ret[fnkey] = vc_h
+
     return ret
 
 if __name__ == "__main__":
