@@ -44,6 +44,43 @@ def main(stdin):
                 raise Exception('Version error: ' + str(vc))
             if vc[1][8:] not in ('2.1', ):
                 raise Exception('Unsupported version: ' + str(vc))
+        # Check validity of options.
+        h = {}
+        state = "normal"
+        for elem in vc[2:-1]:
+            if inphoto:
+                if '' == elem:
+                    h[photo_k] = photo_v
+                    inphoto = False
+                    photo_k = []  # An invalid hash key
+                    photo_v = ''
+                    continue
+                elif ':' in elem:
+                    h[photo_k] = photo_v
+                    inphoto = False
+                    photo_k = []  # An invalid hash key
+                    photo_v = ''
+                    # No continue!
+                else:
+                    photo_v = photo_v + elem[1:]
+                    continue
+            # There would be an else, but one section needs to break above.
+            splits = elem.split(':')
+            if len(splits) < 2:
+                raise Exception('Bad elem : ' + str(elem))
+            k = splits[0]
+            v = ':'.join(splits[1:])
+            if k in ('PHOTO;ENCODING=BASE64;JPEG', 'NOTE;ENCODING=QUOTED-PRINTABLE'):
+                " need to fix this, photos, end with a blank line(encoding=Base 64,
+                while notes (or anything with an encoding quoted-printable) don't have
+                an end, so we can check for a ':' to break to next option.
+                "
+                inphoto = True
+                photo_k = k
+                photo_v = v
+            else:
+                print(k)
+
     ret = {}
     return ret
 
