@@ -22,19 +22,28 @@ def main(stdin):
     inp = stdin.readlines()
     if 1 != len(inp):
         raise Exception('Not exactly one line of input.')
-    inp = inp[0]
-    if '[' != inp[0] or ']' != inp[-1]:
+    inp = eval(inp[0])
+    if not isinstance(inp, list):
         raise Exception('Not a list.')
-    if '[' != inp[1] or ']' != inp[-2]:
-        raise Exception('Not a list of lists.')
-    inp = eval(inp)
     for v in inp:
-        if type v == 'list':
-            raise Exception('Something is not a list.')
-
-        #line = line.encode('ascii').strip()
-            #if line == 'END:VCARD':
-            #if line != 'BEGIN:VCARD':
+        if not isinstance(v, list):
+            raise Exception('Not a list of lists: ' + str(v))
+        for s in v:
+            if not isinstance(s, str):
+                raise Exception('Not a list of lists of strings: ' + str(s))
+            if s != s.encode('ascii', 'ignore').strip():
+                raise Exception('Not a list of lists of ASCII strings: ' + s)
+    # Now we can check the values themselves.
+    for vc in inp:
+        if 3 >= len(vc):
+            raise Exception('Invalid or empty: ' + str(vc))
+        else:
+            if 'BEGIN:VCARD' != vc[0] or 'END:VCARD' != vc[-1]:
+                raise Exception('Bad begin or end: ' + str(vc))
+            if 'VERSION:' != vc[1][0:8]:
+                raise Exception('Version error: ' + str(vc))
+            if vc[1][8:] not in ('2.1', ):
+                raise Exception('Unsupported version: ' + str(vc))
     ret = {}
     return ret
 
