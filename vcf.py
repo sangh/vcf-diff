@@ -35,20 +35,28 @@ def cmd_diff(base_vcf, subset_vcf):
     base_keys = base.keys()
     for subset_key in subset.keys():
         if not subset_key in base_keys:
-            print("VCF not in base: " + str(subset_key))
+            print("-  VCF not in base: " + str(subset_key))
+            print("---subset---> " + str(subset[subset_key]))
         else:
             bv_keys = base[subset_key].keys()
             sv = subset[subset_key]
+            print_cmp = False
             for k in sv.keys():
                 if not k in bv_keys:
-                    print("Field not in base: " + str(subset_key) + " => " +
-                        str(k) + ", " + str(sv[k]))
+                    print("-  Field not in base: " + str(subset_key) +
+                        " => " + str(k) + ", " + str(sv[k]))
+                    print_cmp = True
                 else:
                     if base[subset_key][k] != sv[k]:
-                        print("Diff values: " + str(subset_key) + " => " +
+                        print("-  Diff values: " + str(subset_key) + " => " +
                                 str(k) + " (base, subset): (" +
                             str(base[subset_key][k]) + ", " +
                             str(sv[k]) + ").")
+                        print_cmp = True
+            if print_cmp:
+                print("----base----> " + str(base[subset_key]))
+                print("---subset---> " + str(subset[subset_key]))
+                print("")
 all_commands['diff'] = cmd_diff
 
 
