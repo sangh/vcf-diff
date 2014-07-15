@@ -20,16 +20,35 @@ the results.
 """
 
 import sys
-import 
+import parse_into_vcards
+import parse_into_hash
 
 all_commands = {}
 
-def cmd_validate(stream):
-    print("stream: " + str(stream))
+def cmd_validate(vcf):
+    return parse_into_hash.main(parse_into_vcards.main(open(vcf)), True)
 all_commands['validate'] = cmd_validate
 
-def cmd_diff(base, subset):
-    print("base: " + str(base) + " subs: " + str(subset))
+def cmd_diff(base_vcf, subset_vcf):
+    base = cmd_validate(base_vcf)
+    subset = cmd_validate(subset_vcf)
+    base_keys = base.keys()
+    for subset_key in subset.keys():
+        if not subset_key in base_keys:
+            print("VCF not in base: " + str(subset_key))
+        else:
+            bv_keys = base[subset_key].keys()
+            sv = subset[subset_key]
+            for k in sv.keys():
+                if not k in bv_keys:
+                    print("Field not in base: " + str(subset_key) + " => " +
+                        str(k) + ", " + str(sv[k]))
+                else:
+                    if base[subset_key][k] != sv[k]:
+                        print("Diff values: " + str(subset_key) + " => " +
+                                str(k) + " (base, subset): (" +
+                            str(base[subset_key][k]) + ", " +
+                            str(sv[k]) + ").")
 all_commands['diff'] = cmd_diff
 
 

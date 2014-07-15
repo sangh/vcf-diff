@@ -81,12 +81,15 @@ def _parse_one_vc(vc):
         ret[tuple(key)] = elem[1]
     return ret
 
-def main(stdin):
+def main(stdin, useDirectly = False):
     """Read, and eval stdin, evil, I know, shut up."""
-    inp = stdin.readlines()
-    if 1 != len(inp):
-        raise Exception('Not exactly one line of input.')
-    inp = eval(inp[0])
+    if useDirectly:
+        inp = stdin
+    else:
+        inp = stdin.readlines()
+        if 1 != len(inp):
+            raise Exception('Not exactly one line of input.')
+        inp = eval(inp[0])
     if not isinstance(inp, list):
         raise Exception('Not a list.')
     for v in inp:
