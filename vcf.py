@@ -30,13 +30,31 @@ def cmd_validate(vcf):
 all_commands['validate'] = cmd_validate
 
 def cmd_diff(base_vcf, subset_vcf):
-    base = cmd_validate(base_vcf)
-    subset = cmd_validate(subset_vcf)
+    def compress_large_values(vcf):
+        """If any value field is large replace with its MD5."""
+        import hashlib
+        for ent in vcf.keys():
+            for k in vcf[ent].keys():
+                if 200 < len(vcf[ent][k]):
+                    hmd = hashlib.md5()
+                    hmd.update(vcf[ent][k])
+                    vcf[ent][k] = "MD5: " + hmd.hexdigest()
+        return vcf
+    def rm_hyphen_from_tel(vcf):
+        """We don't want the hyphen when comparing phone numbers."""
+        for ent in vcf.keys():
+            for k in vcf[ent].keys():
+                if k[0].startswith('TEL'):
+                    vcf[ent][k] = vcf[ent][k].replace('-', '')
+        return vcf
+    base = rm_hyphen_from_tel(compress_large_values(cmd_validate(base_vcf)))
+    subset = rm_hyphen_from_tel(compress_large_values(cmd_validate(subset_vcf)))
     base_keys = base.keys()
     for subset_key in subset.keys():
         if not subset_key in base_keys:
             print("-  VCF not in base: " + str(subset_key))
             print("---subset---> " + str(subset[subset_key]))
+            print("")
         else:
             bv_keys = base[subset_key].keys()
             sv = subset[subset_key]
@@ -48,11 +66,12 @@ def cmd_diff(base_vcf, subset_vcf):
                     print_cmp = True
                 else:
                     if base[subset_key][k] != sv[k]:
-                        print("-  Diff values: " + str(subset_key) + " => " +
-                                str(k) + " (base, subset): (" +
-                            str(base[subset_key][k]) + ", " +
-                            str(sv[k]) + ").")
-                        print_cmp = True
+                        if ('PHOTO;JPEG', 'ASCII', 'BASE64') != k:
+                            print("-  Diff values: " + str(subset_key) +
+                                " => " + str(k) + " (base, subset): (" +
+                                str(base[subset_key][k]) + ", " +
+                                str(sv[k]) + ").")
+                            print_cmp = True
             if print_cmp:
                 print("----base----> " + str(base[subset_key]))
                 print("---subset---> " + str(subset[subset_key]))
