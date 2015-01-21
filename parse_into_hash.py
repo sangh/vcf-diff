@@ -120,14 +120,22 @@ def main(stdin, useDirectly = False):
         ret[fnkey] = vc_h
 
     for k,v in ret.items():
+        nnfields = 0
         for i in v:
-            if i[0] in ('FN', 'N', 'NOTE', 'PHOTO;JPEG', 'URL', ):
+            if i[0] == 'N':
+                nnfields = nnfields + 1
+                if v[i] != ";%s;;;" % (k):
+                    raise Exception('N key does not match FN: ' + str(v))
+                continue
+            if i[0] in ('FN', 'NOTE', 'PHOTO;JPEG', 'URL', ):
                 continue
             if i[0][0:5] == 'EMAIL':
                 continue
             if i[0][0:4] in ('ADR;', 'TEL;', ):
                 continue
             raise Exception('Unknown key base: ' + str(i) + ' in: ' + str(v))
+        if nnfields != 1:
+            raise Exception('Multiple or no N filed(s): ' + str(v))
     return ret
 
 if __name__ == "__main__":
