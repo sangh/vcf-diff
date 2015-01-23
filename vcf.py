@@ -53,7 +53,7 @@ def cmd_diff(base_vcf, subset_vcf):
     for subset_key in subset.keys():
         if not subset_key in base_keys:
             print("-  VCF not in base: " + str(subset_key))
-            print("---subset---> " + str(subset[subset_key]))
+            print("---subset---> " + sprint_card(subset[subset_key]))
             print("")
         else:
             bv_keys = base[subset_key].keys()
@@ -73,10 +73,32 @@ def cmd_diff(base_vcf, subset_vcf):
                                 str(sv[k]) + ").")
                             print_cmp = True
             if print_cmp:
-                print("----base----> " + str(base[subset_key]))
-                print("---subset---> " + str(subset[subset_key]))
+                print("----base----> " + sprint_card(base[subset_key]))
+                print("---subset---> " + sprint_card(subset[subset_key]))
                 print("")
 all_commands['diff'] = cmd_diff
+
+def sprint_card(vc_h):
+    """Return a vcard hash in a better format as a string."""
+    def get_parts(vc_h, f):
+        filtered_parts = [i for i in filter(f, vc_h)]
+        if len(filtered_parts) == 0:
+            ret = ""
+        elif len(filtered_parts) == 1:
+            ret = str({filtered_parts[0]: vc_h[filtered_parts[0]]})
+        else:
+            ret = str(sorted(filtered_parts, key=lambda i: i[0]))
+        return ret
+
+    try:
+        ret = get_parts(vc_h, lambda i: 'FN' == i[0])
+        ret = ret + get_parts(vc_h, lambda i: 'N' == i[0]) + "\n"
+        ret = ret + get_parts(vc_h, lambda i: i[0][0:3] == 'TEL') + "\n"
+        ret = ret + get_parts(vc_h, 
+                lambda i: not i[0] in ('FN', 'N', ) and i[0][0:3] != 'TEL')
+        return ret
+    except:
+        return str(vc_h)
 
 
 if __name__ == "__main__":
