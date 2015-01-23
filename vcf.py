@@ -96,10 +96,9 @@ def sprint_card(vc_h):
         ret = ret + get_parts(vc_h, lambda i: i[0][0:3] == 'TEL') + "\n"
         ret = ret + get_parts(vc_h, 
                 lambda i: not i[0] in ('FN', 'N', ) and i[0][0:3] != 'TEL')
-        ret
+        return ret.strip()
     except:
-        ret = str(vc_h)
-    return ret.strip() + "\n"
+        return str(vc_h).strip()
 
 
 if __name__ == "__main__":
