@@ -85,15 +85,16 @@ def sprint_card(vc_h):
         if len(filtered_parts) == 0:
             ret = ""
         elif len(filtered_parts) == 1:
-            ret = str({filtered_parts[0]: vc_h[filtered_parts[0]]})
+            ret = "%s: %s" % (filtered_parts[0], vc_h[filtered_parts[0]])
         else:
-            ret = str(sorted(filtered_parts, key=lambda i: i[0]))
+            ret = []
+            for k in sorted(filtered_parts, key=lambda i: i[0]):
+                ret.append("%s: %s" % (k, vc_h[k]))
+            ret = "  ".join(ret)
         return ret
 
     try:
-        ret = get_parts(vc_h, lambda i: 'FN' == i[0])
-        ret = ret + get_parts(vc_h, lambda i: 'N' == i[0]) + "\n"
-        ret = ret + get_parts(vc_h, lambda i: i[0][0:3] == 'TEL') + "\n"
+        ret = "\n" + get_parts(vc_h, lambda i: i[0][0:3] == 'TEL') + "\n"
         ret = ret + get_parts(vc_h, 
                 lambda i: not i[0] in ('FN', 'N', ) and i[0][0:3] != 'TEL')
         return ret.strip()
