@@ -133,7 +133,7 @@ def main(stdin, useDirectly = False):
                 if i[0][5:] in (';HOME', ';WORK', ):
                     continue
                 raise Exception("Email isn't home|work: " + str(v))
-            if i[0][0:4] in ('ADR;', 'TEL;', ):
+            if i[0][0:4] in ('ADR;', 'ADR', 'TEL;', ):
                 if 'PREF' in i[0]:
                     raise Exception('Nothing can be preferred: ' + str(v))
                 continue
