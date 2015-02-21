@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import print_function
 
 help = """The first argument must be a supported command (or enough of the
 begining to unambigously match one.
@@ -104,16 +105,19 @@ def sprint_card(vc_h):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
+        print(help, file=sys.stderr)
         raise Exception('No command given.')
     cmd = sys.argv[1]
     cmdf = None
     for c in all_commands.keys():
         if c.startswith(cmd):
             if cmdf:
+                print(help, file=sys.stderr)
                 raise Exception('Ambiguous command.')
             else:
                 cmdf = all_commands[c]
     if not cmdf:
+        print(help, file=sys.stderr)
         raise Exception('Command not found: ' + str(cmd))
 
     cmdf(*sys.argv[2:])
